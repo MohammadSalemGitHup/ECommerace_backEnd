@@ -1,0 +1,29 @@
+# مجلدات يجب تجاهلها
+node_modules/
+upload/
+tmp/
+dist/
+build/
+
+# ملفات البيئة
+.env
+
+# ملفات السجلات (Logs)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# ملفات النظام
+.DS_Store
+Thumbs.db
+
+# ملفات المحررات
+.vscode/
+.idea/
+
+# نتائج الاختبارات
+coverage/
+
+# ملفات مؤقتة
+*.swp
