@@ -1,4 +1,6 @@
-
+/* 
+All APIs in this BackEnd it is --RESTful API-- 
+*/
 import express from 'express';
 const mohsal_app = express();
 
@@ -14,8 +16,17 @@ mohsal_dotenv.config();
 console.log(`mohsal_dotenv file configration done yaaaaaa`);
 
 
+//////// Security on incoming requests //////////////
 import mohsal_cors from "cors";
-
+const corsOptions = {
+  // ✅ Allow requests only from these origins (React & Vite dev servers)
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173"
+  ],
+  // 🔐 Allow cookies / tokens / authorization headers to be sent
+  credentials: true
+};
 
 
 
@@ -23,7 +34,8 @@ import mohsal_cors from "cors";
 ////////////////////use  MiddleWare as a global //////////////
 // register in Middle Ware
 mohsal_app.use(express.json()); //parse incoming JSON data
-mohsal_app.use(mohsal_cors()); //call your API safely
+mohsal_app.use(mohsal_cors(corsOptions));//call your API safely (Cross-Origin Resource Sharing - to access from frontEnd on Port 3000 to backEnd on port 4000 in safty )
+ 
 
 
 //////////////////// server listen on static socket ////////////////////////////
@@ -282,6 +294,9 @@ http://localhost:4000/removeproduct/1
 
 
 
+
+
+
 ///////////////////////////////////////////////////
 ////////////////////// SignUp and LoginIn //////////////////////
 /////////////////////////////////////////////////////
@@ -291,9 +306,9 @@ http://localhost:4000/removeproduct/1
 // Shema creating for user model 
 const Users = mohsal_mongoose.model("Users",{
 
-  name: {type: String},
-  email: {type:String, unique: true},
-  password: {type:String},
+  name: {type: String, trim: true, required: true},
+  email: {type:String, trim: true, unique: true, required: true},
+  password: {type:String, required: true},
   cartData: {type:Object},
   date: {type:Date, default: Date.now}
 });
@@ -310,7 +325,7 @@ mohsal_app.post("/signup", async (reqest, response) => {
 
   try{
 
-    const {userName, email, password, cartData} = reqest.body;
+    const {userName, email, password} = reqest.body;
 
     // check user exist or not on Data base 
     let check_user = await Users.findOne( {email: email} );
@@ -329,6 +344,9 @@ mohsal_app.post("/signup", async (reqest, response) => {
     
     // commit on data base 
     await user.save();
+
+    console.log(`${user.id} SignedUp...`);
+    
 
     
     ///////////////// JWT Authntication //////////////
@@ -373,7 +391,8 @@ mohsal_app.post("/login", async (request, response) => {
 
     const pass_comapr = ( user.password === request.body.password );
     if(pass_comapr){
-
+      console.log(`user id = ${user.id} => is Login...`);
+      
 
        ///////////////// JWT Authntication //////////////
       const data_payload = { user: {id: user.id} };
@@ -402,3 +421,35 @@ on Body JSON =>
 
 */
 
+
+
+///////////////// Check Valied User By verifytoken//////////////
+
+mohsal_app.post('/verifytoken', (request, response) => {
+  const token = request.header("auth-token");
+  if (!token) return response.status(401).json({ error: "No token provided" });
+
+  try {
+    const verified = mohsal_jwt.verify(token, process.env.MOHSAL_JWT_SECRET);
+    return response.json({ success: true, user: verified.user });
+  
+  } catch (err) {
+    return response.status(403).json({ error: "Invalid token" });
+  }
+
+});
+/*
+UseCase:
+localhost:4000/verifytoken
+onHeader ?
+key:value 
+auth-token:XXXX.YYYY.ZZZZ
+
+*/
+
+
+
+
+// mohsal_app.post('/addtocart', (request, response) => {
+
+// });
