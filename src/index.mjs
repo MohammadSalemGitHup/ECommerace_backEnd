@@ -450,6 +450,174 @@ auth-token:XXXX.YYYY.ZZZZ
 
 
 
-// mohsal_app.post('/addtocart', (request, response) => {
 
-// });
+////////////////////////////////////////////////////////////////////////////////
+///////////////// Cart APIs /////////////////////////////////
+
+// featch user MidleWare 
+const fetchUser = async (req, res, next) => {
+
+  const token = req.header('auth-token');
+  if(!token){
+    return res.status(401).send({error: "Access Denied"});
+  }else{
+
+    try{
+      const decoded_data = mohsal_jwt.verify(token, process.env.MOHSAL_JWT_SECRET);
+      // console.log(decoded_data.user.id);
+  
+      req.userId = decoded_data.user.id; // save user info on request
+      
+
+      next(); // Go to API to continue ...
+
+    }catch(err){
+      console.log("fetchUser err : ", err);
+      return res.status(401).send({error: "Stuck on featch user MidleWare, Invalid Token"});
+      
+    }
+
+  }
+
+}
+
+// addtocart Once Time 
+mohsal_app.post('/addtocart', fetchUser, async (request, response) => {
+
+  try{
+    const {itemId} = request.body;
+    const userID = request.userId;  // read from fetchUser middleware 
+    console.log(itemId, userID);
+
+    const found_user = await Users.findOne({ _id: userID });
+    // console.log(found_user);
+    if(!found_user || found_user === null){
+      return response.status(400).json({error: "User Not Found on data base ..."});
+    }
+
+    // cartData object is Exist ? 
+     if (!found_user.cartData){
+      found_user.cartData = {};
+      return response.status(400).json({error: "cartData does not exist"});
+     } 
+
+    found_user.cartData[itemId] = (found_user.cartData[itemId] ) + 1;
+    // console.log(found_user.cartData);
+  
+    // update on cartData at database
+    await Users.updateOne(
+      { _id: userID },
+      { $set: { cartData: found_user.cartData } }
+    );
+
+    return response.status(200).json({ success: true, cartData: found_user.cartData });
+    
+
+  } catch (err) {
+    console.error("Error on add to cart:", err);
+    return response.status(400).json({ error: "Not Added..." });
+  }
+});
+
+/*
+UseCase => 
+  http://localhost:4000/addtocart
+on header => 
+    auth-token= XXXX.YYYY.ZZZZ
+on Body => 
+{
+  "itemId":5
+}
+*/
+
+
+/////////////////////////////////////////////////////////////
+
+// removefromcart Once Time
+mohsal_app.post('/removefromcart', fetchUser, async (request, response) => {
+
+  try{
+    const {itemId} = request.body;
+    const userID = request.userId;  // read from fetchUser middleware 
+    console.log(itemId, userID);
+
+    const found_user = await Users.findOne({ _id: userID });
+    // console.log(found_user);
+    if(!found_user || found_user === null){
+      return response.status(400).json({error: "User Not Found on data base ..."});
+    }
+
+    // cartData object is Exist ? 
+     if (!found_user.cartData){
+      found_user.cartData = {};
+      return response.status(400).json({error: "cartData does not exist"});
+     } 
+
+    found_user.cartData[itemId] = (found_user.cartData[itemId] ) - 1;
+    // console.log(found_user.cartData);
+  
+    // update on cartData at database
+    await Users.updateOne(
+      { _id: userID },
+      { $set: { cartData: found_user.cartData } }
+    );
+
+    return response.status(200).json({ success: true, cartData: found_user.cartData });
+
+
+
+  }catch(err){
+    console.error("Error on remove from cart:", err);
+    return response.status(400).json({ error: "Not Removed..." });
+  }
+
+});
+
+/*
+UseCase => 
+  http://localhost:4000/removefromcart
+on header => 
+    auth-token= XXXX.YYYY.ZZZZ
+on Body => 
+{
+  "itemId":5
+}
+*/
+
+
+///////////////// Get Cart from Db ///////////////
+
+mohsal_app.post('/getcartData', fetchUser, async (request,response) => {
+
+  const userID = request.userId;  // read from fetchUser middleware 
+  // console.log(userID);
+
+  try{
+
+    const user = await Users.findById( { _id: userID} ); /* findById to get an object, not an array */
+    // console.log(user.cartData);
+
+    if(!user || user === null){
+      return response.status(400).send({err: "User Not found .."});
+    }else{
+      
+      
+      return response.status(200).send(  {cartData: user.cartData} );
+    }
+    
+
+  }catch(err){
+    console.error("Error on getcart API:", err);
+    return response.status(400).json({ error: "Not getcart from getcart API..." });
+
+  }
+});
+/*
+UseCase => 
+  http://localhost:4000/getcartData
+  
+on header => 
+    auth-token= XXXX.YYYY.ZZZZ
+
+response => cartData
+*/
